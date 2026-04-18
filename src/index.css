@@ -52,7 +52,7 @@
 
 #root {
   width: 100%;
-  max-width: 1126px;
+  max-width: min(100%, 1400px);
   margin: 0 auto;
   border-inline: 1px solid var(--border);
   min-height: 100svh;

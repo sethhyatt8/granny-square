@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { GrannySquareMotif } from './components/GrannySquareMotif'
-import { YarnSkeinIcon } from './components/YarnSkeinIcon'
 import {
   YARN_BY_ID,
   YARN_PALETTE,
@@ -11,7 +10,6 @@ import { buildDesignJson, buildSummaryText } from './exportSummary'
 import {
   buildTallies,
   clampDim,
-  CLEAR_ID,
   MAX_DIM,
   MIN_DIM,
   resizeCells,
@@ -47,7 +45,6 @@ export default function App() {
   const [copyHint, setCopyHint] = useState<string | null>(null)
 
   const tallies = useMemo(() => buildTallies(cells), [cells])
-  const emptyCount = tallies.get(CLEAR_ID) ?? 0
   const byBrand = useMemo(() => groupByBrand(YARN_PALETTE), [])
 
   useEffect(() => {
@@ -87,12 +84,20 @@ export default function App() {
     (index: number) => {
       setCells((prev) => {
         const next = [...prev]
-        next[index] = activeYarnId === CLEAR_ID ? null : activeYarnId
+        next[index] = activeYarnId
         return next
       })
     },
     [activeYarnId],
   )
+
+  const onCellClear = useCallback((index: number) => {
+    setCells((prev) => {
+      const next = [...prev]
+      next[index] = null
+      return next
+    })
+  }, [])
 
   const toggleRandomColor = useCallback((id: string) => {
     setRandomPool((prev) => {
@@ -139,268 +144,263 @@ export default function App() {
     downloadTextFile(`granny-quilt-summary-${stamp}.txt`, text, 'text/plain;charset=utf-8')
   }, [rows, cols, tallies])
 
-  const previewColor =
-    activeYarnId !== CLEAR_ID && YARN_BY_ID[activeYarnId]
-      ? YARN_BY_ID[activeYarnId].hex
-      : YARN_PALETTE[0].hex
+  const previewColor = YARN_BY_ID[activeYarnId]?.hex ?? YARN_PALETTE[0].hex
 
   return (
     <div className="quilt-app">
-      <header className="quilt-header">
-        <div className="quilt-header-row">
-          <div className="quilt-motif-preview" title="9×9 mesh preview (active yarn)">
+      <header className="quilt-page-header">
+        <div className="quilt-page-header-row">
+          <div className="quilt-motif-preview" aria-hidden>
             <GrannySquareMotif color={previewColor} />
           </div>
-          <div className="quilt-header-text">
-            <h1>Granny square quilt</h1>
+          <div>
+            <h1 className="quilt-title">Granny Square Designer</h1>
+            <p className="quilt-lede">
+              Set the grid, pick a color, and tap squares to paint. Right-click a square to clear
+              it. Each square uses a 9×9 mesh motif. Your design auto-saves in this browser.
+            </p>
           </div>
         </div>
-        <p className="quilt-lede">
-          Set the grid, pick a yarn, and tap squares. Each filled square uses a
-          9×9 mesh icon: corners are open, center is a round hole, yarn wraps
-          around it. Your design
-          auto-saves in this browser.
-        </p>
       </header>
 
-      <section className="quilt-controls" aria-label="Grid size">
-        <div className="quilt-field">
-          <span id="label-rows">Rows</span>
-          <div className="quilt-stepper" role="group" aria-labelledby="label-rows">
-            <button
-              type="button"
-              className="quilt-step-btn"
-              onClick={() => updateRows(rows - 1)}
-              disabled={rows <= MIN_DIM}
-              aria-label="Decrease rows"
-            >
-              −
-            </button>
-            <input
-              type="number"
-              min={MIN_DIM}
-              max={MAX_DIM}
-              value={rows}
-              onChange={(e) => updateRows(Number(e.target.value))}
-              aria-valuemin={MIN_DIM}
-              aria-valuemax={MAX_DIM}
-            />
-            <button
-              type="button"
-              className="quilt-step-btn"
-              onClick={() => updateRows(rows + 1)}
-              disabled={rows >= MAX_DIM}
-              aria-label="Increase rows"
-            >
-              +
-            </button>
-          </div>
-        </div>
-        <div className="quilt-field">
-          <span id="label-cols">Columns</span>
-          <div className="quilt-stepper" role="group" aria-labelledby="label-cols">
-            <button
-              type="button"
-              className="quilt-step-btn"
-              onClick={() => updateCols(cols - 1)}
-              disabled={cols <= MIN_DIM}
-              aria-label="Decrease columns"
-            >
-              −
-            </button>
-            <input
-              type="number"
-              min={MIN_DIM}
-              max={MAX_DIM}
-              value={cols}
-              onChange={(e) => updateCols(Number(e.target.value))}
-            />
-            <button
-              type="button"
-              className="quilt-step-btn"
-              onClick={() => updateCols(cols + 1)}
-              disabled={cols >= MAX_DIM}
-              aria-label="Increase columns"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </section>
+      <div className="quilt-workspace">
+        <aside className="quilt-sidebar" aria-label="Tools and yarn">
+          <section className="quilt-controls" aria-label="Grid size">
+            <div className="quilt-field">
+              <span className="quilt-field-label" id="label-rows">
+                Rows
+              </span>
+              <div className="quilt-stepper" role="group" aria-labelledby="label-rows">
+                <button
+                  type="button"
+                  className="quilt-step-btn"
+                  onClick={() => updateRows(rows - 1)}
+                  disabled={rows <= MIN_DIM}
+                  aria-label="Decrease rows"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={MIN_DIM}
+                  max={MAX_DIM}
+                  value={rows}
+                  onChange={(e) => updateRows(Number(e.target.value))}
+                  aria-valuemin={MIN_DIM}
+                  aria-valuemax={MAX_DIM}
+                />
+                <button
+                  type="button"
+                  className="quilt-step-btn"
+                  onClick={() => updateRows(rows + 1)}
+                  disabled={rows >= MAX_DIM}
+                  aria-label="Increase rows"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <div className="quilt-field">
+              <span className="quilt-field-label" id="label-cols">
+                Columns
+              </span>
+              <div className="quilt-stepper" role="group" aria-labelledby="label-cols">
+                <button
+                  type="button"
+                  className="quilt-step-btn"
+                  onClick={() => updateCols(cols - 1)}
+                  disabled={cols <= MIN_DIM}
+                  aria-label="Decrease columns"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={MIN_DIM}
+                  max={MAX_DIM}
+                  value={cols}
+                  onChange={(e) => updateCols(Number(e.target.value))}
+                />
+                <button
+                  type="button"
+                  className="quilt-step-btn"
+                  onClick={() => updateCols(cols + 1)}
+                  disabled={cols >= MAX_DIM}
+                  aria-label="Increase columns"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </section>
 
-      <section className="quilt-palette-wrap" aria-label="Yarn colors">
-        <h2 className="quilt-h2">Paint with</h2>
-        <div className="quilt-palette">
-          <button
-            type="button"
-            className={`quilt-skein-btn quilt-clear-btn ${activeYarnId === CLEAR_ID ? 'is-active' : ''}`}
-            onClick={() => setActiveYarnId(CLEAR_ID)}
-            aria-pressed={activeYarnId === CLEAR_ID}
+          <section className="quilt-palette-section" aria-labelledby="paint-heading">
+            <h2 id="paint-heading" className="quilt-h2">
+              Paint with
+            </h2>
+            <div className="quilt-brand-group">
+              <h3 className="quilt-h3">Mainstays</h3>
+              <ul className="quilt-paint-list">
+                {byBrand.mainstays.map((y) => (
+                  <li key={y.id}>
+                    <button
+                      type="button"
+                      className={`quilt-paint-chip ${activeYarnId === y.id ? 'is-active' : ''}`}
+                      onClick={() => setActiveYarnId(y.id)}
+                      aria-pressed={activeYarnId === y.id}
+                    >
+                      <span
+                        className="quilt-paint-swatch"
+                        style={{ backgroundColor: y.hex }}
+                        aria-hidden
+                      />
+                      <span className="quilt-paint-name">{y.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="quilt-brand-group">
+              <h3 className="quilt-h3">Red Heart</h3>
+              <ul className="quilt-paint-list">
+                {byBrand['red-heart'].map((y) => (
+                  <li key={y.id}>
+                    <button
+                      type="button"
+                      className={`quilt-paint-chip ${activeYarnId === y.id ? 'is-active' : ''}`}
+                      onClick={() => setActiveYarnId(y.id)}
+                      aria-pressed={activeYarnId === y.id}
+                    >
+                      <span
+                        className="quilt-paint-swatch"
+                        style={{ backgroundColor: y.hex }}
+                        aria-hidden
+                      />
+                      <span className="quilt-paint-name">{y.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </aside>
+
+        <div className="quilt-main">
+          <p className="quilt-grid-hint">
+            Click a square to paint with the selected color. Right-click to clear.
+          </p>
+          <section
+            className="quilt-grid-section"
+            aria-label="Quilt grid — right-click a square to clear"
           >
-            <span className="quilt-clear-icon" aria-hidden />
-            <span className="quilt-skein-label">Clear cell</span>
-          </button>
-
-          <div className="quilt-brand-group">
-            <h3 className="quilt-h3">Mainstays</h3>
-            <div className="quilt-skein-row">
-              {byBrand.mainstays.map((y) => (
-                <button
-                  key={y.id}
-                  type="button"
-                  className={`quilt-skein-btn ${activeYarnId === y.id ? 'is-active' : ''}`}
-                  onClick={() => setActiveYarnId(y.id)}
-                  aria-pressed={activeYarnId === y.id}
-                  title={`${y.label} (${y.hex})`}
-                >
-                  <YarnSkeinIcon color={y.hex} size={40} />
-                  <span className="quilt-skein-label">{y.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="quilt-brand-group">
-            <h3 className="quilt-h3">Red Heart</h3>
-            <div className="quilt-skein-row">
-              {byBrand['red-heart'].map((y) => (
-                <button
-                  key={y.id}
-                  type="button"
-                  className={`quilt-skein-btn ${activeYarnId === y.id ? 'is-active' : ''}`}
-                  onClick={() => setActiveYarnId(y.id)}
-                  aria-pressed={activeYarnId === y.id}
-                  title={`${y.label} (${y.hex})`}
-                >
-                  <YarnSkeinIcon color={y.hex} size={40} />
-                  <span className="quilt-skein-label">{y.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="quilt-grid-section" aria-label="Quilt grid">
-        <div
-          className="quilt-grid"
-          style={{
-            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-            aspectRatio: `${cols} / ${rows}`,
-          }}
-        >
-          {cells.map((yarnId, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`quilt-cell ${yarnId ? 'has-yarn' : 'is-empty'}`}
-              onClick={() => onCellClick(i)}
-              aria-label={
-                yarnId
-                  ? `Square ${Math.floor(i / cols) + 1},${(i % cols) + 1}: ${YARN_BY_ID[yarnId]?.label ?? 'color'}`
-                  : `Square ${Math.floor(i / cols) + 1},${(i % cols) + 1}: empty`
+            <div
+              className="quilt-grid"
+              style={
+                {
+                  ['--qc' as string]: String(cols),
+                  ['--qr' as string]: String(rows),
+                  gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                  aspectRatio: `${cols} / ${rows}`,
+                } as CSSProperties
               }
             >
-              {yarnId ? (
-                <GrannySquareMotif color={YARN_BY_ID[yarnId]?.hex ?? '#888'} />
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </section>
+              {cells.map((yarnId, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`quilt-cell ${yarnId ? 'has-yarn' : 'is-empty'}`}
+                  onClick={() => onCellClick(i)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    onCellClear(i)
+                  }}
+                  aria-label={
+                    yarnId
+                      ? `Square ${Math.floor(i / cols) + 1},${(i % cols) + 1}: ${YARN_BY_ID[yarnId]?.label ?? 'color'}`
+                      : `Square ${Math.floor(i / cols) + 1},${(i % cols) + 1}: empty`
+                  }
+                >
+                  {yarnId ? (
+                    <GrannySquareMotif color={YARN_BY_ID[yarnId]?.hex ?? '#888'} />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      <section className="quilt-tally" aria-label="Square counts">
-        <h2 className="quilt-h2">Squares per color</h2>
-        <p className="quilt-empty-line">
-          Empty: <strong>{emptyCount}</strong>
-        </p>
-        <ul className="quilt-tally-list">
-          {YARN_PALETTE.map((y) => {
-            const n = tallies.get(y.id) ?? 0
-            return (
-              <li key={y.id}>
-                <span className="quilt-tally-mini" aria-hidden>
-                  <GrannySquareMotif color={y.hex} />
-                </span>
-                <span className="quilt-tally-name">{y.label}</span>
-                <span className="quilt-tally-brand">
-                  {y.brand === 'mainstays' ? 'Mainstays' : 'Red Heart'}
-                </span>
-                <span className="quilt-tally-count">{n}</span>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+          <div className="quilt-below-grid">
+            <section className="quilt-random" aria-labelledby="random-heading">
+              <h2 id="random-heading" className="quilt-h2">
+                Random mosaic
+              </h2>
+              <p className="quilt-random-help">
+                Choose up to {MAX_RANDOM_COLORS} colors, then fill the grid at random with only those
+                yarns.
+              </p>
+              <div className="quilt-random-picks" role="group" aria-label="Colors for random fill">
+                {YARN_PALETTE.map((y) => {
+                  const checked = randomPool.includes(y.id)
+                  const atCap = !checked && randomPool.length >= MAX_RANDOM_COLORS
+                  return (
+                    <label key={y.id} className={`quilt-random-chip ${atCap ? 'is-disabled' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={atCap}
+                        onChange={() => toggleRandomColor(y.id)}
+                      />
+                      <span
+                        className="quilt-random-swatch"
+                        style={{ backgroundColor: y.hex }}
+                        aria-hidden
+                      />
+                      <span className="quilt-random-label">{y.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="quilt-random-count">
+                Selected: {randomPool.length}/{MAX_RANDOM_COLORS}
+              </p>
+              <div className="quilt-random-actions">
+                <button
+                  type="button"
+                  className="quilt-btn-primary"
+                  onClick={fillRandom}
+                  disabled={randomPool.length === 0}
+                >
+                  Fill grid randomly
+                </button>
+                <button type="button" className="quilt-btn-ghost" onClick={clearGrid}>
+                  Clear entire grid
+                </button>
+              </div>
+            </section>
 
-      <section className="quilt-random" aria-labelledby="random-heading">
-        <h2 id="random-heading" className="quilt-h2">
-          Random mosaic
-        </h2>
-        <p className="quilt-random-help">
-          Choose up to {MAX_RANDOM_COLORS} colors, then fill the grid at random
-          with only those yarns.
-        </p>
-        <div className="quilt-random-picks" role="group" aria-label="Colors for random fill">
-          {YARN_PALETTE.map((y) => {
-            const checked = randomPool.includes(y.id)
-            const atCap = !checked && randomPool.length >= MAX_RANDOM_COLORS
-            return (
-              <label key={y.id} className={`quilt-random-chip ${atCap ? 'is-disabled' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={atCap}
-                  onChange={() => toggleRandomColor(y.id)}
-                />
-                <span
-                  className="quilt-random-swatch"
-                  style={{ backgroundColor: y.hex }}
-                />
-                <span>{y.label}</span>
-              </label>
-            )
-          })}
+            <section className="quilt-save" aria-labelledby="save-heading">
+              <h2 id="save-heading" className="quilt-h2">
+                Save & export
+              </h2>
+              <p className="quilt-save-note">
+                This browser keeps your last layout automatically. You can also copy a text summary or
+                download JSON with the full grid and counts.
+              </p>
+              <div className="quilt-save-actions">
+                <button type="button" className="quilt-btn-primary" onClick={copySummary}>
+                  Copy summary
+                </button>
+                <button type="button" className="quilt-btn-secondary" onClick={downloadSummary}>
+                  Download summary (.txt)
+                </button>
+                <button type="button" className="quilt-btn-secondary" onClick={downloadDesign}>
+                  Download design (.json)
+                </button>
+              </div>
+              {copyHint ? <p className="quilt-copy-hint">{copyHint}</p> : null}
+            </section>
+          </div>
         </div>
-        <p className="quilt-random-count">
-          Selected: {randomPool.length}/{MAX_RANDOM_COLORS}
-        </p>
-        <div className="quilt-random-actions">
-          <button
-            type="button"
-            className="quilt-btn-primary"
-            onClick={fillRandom}
-            disabled={randomPool.length === 0}
-          >
-            Fill grid randomly
-          </button>
-          <button type="button" className="quilt-btn-ghost" onClick={clearGrid}>
-            Clear entire grid
-          </button>
-        </div>
-      </section>
-
-      <section className="quilt-save" aria-labelledby="save-heading">
-        <h2 id="save-heading" className="quilt-h2">
-          Save & export
-        </h2>
-        <p className="quilt-save-note">
-          This browser keeps your last layout automatically. You can also copy a
-          text summary or download JSON with the full grid and counts.
-        </p>
-        <div className="quilt-save-actions">
-          <button type="button" className="quilt-btn-primary" onClick={copySummary}>
-            Copy summary
-          </button>
-          <button type="button" className="quilt-btn-secondary" onClick={downloadSummary}>
-            Download summary (.txt)
-          </button>
-          <button type="button" className="quilt-btn-secondary" onClick={downloadDesign}>
-            Download design (.json)
-          </button>
-        </div>
-        {copyHint ? <p className="quilt-copy-hint">{copyHint}</p> : null}
-      </section>
+      </div>
     </div>
   )
 }
